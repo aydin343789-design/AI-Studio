@@ -1,0 +1,14 @@
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+*.jks
+*.keystore
+keystore.properties
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
