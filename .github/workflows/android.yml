@@ -31,23 +31,23 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Configure persistent release signing
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
+      - name: Configure permanent signing key
+        shell: bash
         run: |
+          set -euo pipefail
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "::error::Add all four Android signing secrets before building. No debug APK is produced because it cannot safely upgrade the signed release."
+            exit 1
+          fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ai-studio-release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/ai-studio-release.jks" >> "$GITHUB_ENV"
 
       - name: Build signed release APK
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: gradle :app:assembleRelease
 
-      - name: Build debug APK (temporary, not for upgrades)
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 == '' || env.ANDROID_KEYSTORE_PASSWORD == '' || env.ANDROID_KEY_ALIAS == '' || env.ANDROID_KEY_PASSWORD == '' }}
-        run: gradle :app:assembleDebug
-
-      - name: Upload APK
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: AI-Studio-apk
-          path: app/build/outputs/apk/**/*.apk
+          name: AI-Studio-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
