@@ -35,11 +35,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
-            echo "::error::Add all four Android signing secrets before building. No debug APK is produced because it cannot safely upgrade the signed release."
+          missing=()
+          [[ -n "$ANDROID_KEYSTORE_BASE64" ]] || missing+=("ANDROID_KEYSTORE_BASE64")
+          [[ -n "$ANDROID_KEYSTORE_PASSWORD" ]] || missing+=("ANDROID_KEYSTORE_PASSWORD")
+          [[ -n "$ANDROID_KEY_ALIAS" ]] || missing+=("ANDROID_KEY_ALIAS")
+          [[ -n "$ANDROID_KEY_PASSWORD" ]] || missing+=("ANDROID_KEY_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
+            echo "No debug APK is produced because it cannot safely upgrade the signed release."
             exit 1
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ai-studio-release.jks"
+          keytool -list -keystore "$RUNNER_TEMP/ai-studio-release.jks" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/ai-studio-release.jks" >> "$GITHUB_ENV"
 
       - name: Build signed release APK
